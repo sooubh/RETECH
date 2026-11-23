@@ -56,7 +56,7 @@ def create_app(config=None):
                 abort(400, "Your form expired. Reload the page and try again.")
         user_id = session.get("user_id")
         if user_id is not None:
-            g.user = row("SELECT id, name, email, role FROM users WHERE id = %s", (user_id,))
+            g.user = row("SELECT id, name, email, role FROM users WHERE id = ?", (user_id,))
 
     @app.errorhandler(400)
     @app.errorhandler(403)
