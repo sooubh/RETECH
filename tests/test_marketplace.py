@@ -1,5 +1,5 @@
-import os
-import re
+from pathlib import Path
+from tempfile import TemporaryDirectory
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
@@ -23,12 +23,15 @@ LISTING = {
 class MarketplaceTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        database = os.getenv("RETECH_TEST_DATABASE", "")
-        if not re.fullmatch(r"[a-zA-Z0-9_]+_test", database):
-            raise RuntimeError("Set RETECH_TEST_DATABASE to a dedicated MySQL database ending in _test.")
-        cls.app = create_app({"TESTING": True, "MYSQL_DATABASE": database, "SECRET_KEY": uuid4().hex})
+        cls.test_dir = TemporaryDirectory()
+        db_path = str(Path(cls.test_dir.name) / "retech_test.sqlite3")
+        cls.app = create_app({"TESTING": True, "DATABASE": db_path, "SECRET_KEY": uuid4().hex})
         with cls.app.app_context():
             initialize_database()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.test_dir.cleanup()
 
     def setUp(self):
         self.domain = f"@{uuid4().hex}.example"
@@ -37,13 +40,28 @@ class MarketplaceTests(unittest.TestCase):
         pattern = ("%" + self.domain,)
         with self.app.app_context():
             execute(
-                """DELETE t FROM transactions t JOIN buyback_requests r ON r.id = t.request_id
-                   JOIN users u ON u.id = r.buyer_id WHERE u.email LIKE %s""",
+                """DELETE FROM transactions WHERE request_id IN
+                   (SELECT r.id FROM buyback_requests r JOIN users u ON u.id = r.buyer_id
+                    WHERE u.email LIKE ?)""",
                 pattern,
             )
-            execute("DELETE r FROM buyback_requests r JOIN users u ON u.id = r.buyer_id WHERE u.email LIKE %s", pattern)
-            execute("DELETE l FROM listings l JOIN users u ON u.id = l.seller_id WHERE u.email LIKE %s", pattern)
-            execute("DELETE FROM users WHERE email LIKE %s", pattern)
+            execute(
+                """DELETE FROM buyback_requests WHERE buyer_id IN
+                   (SELECT id FROM users WHERE email LIKE ?)""",
+                pattern,
+            )
+            execute(
+                """DELETE FROM buyback_requests WHERE listing_id IN
+                   (SELECT l.id FROM listings l JOIN users u ON u.id = l.seller_id
+                    WHERE u.email LIKE ?)""",
+                pattern,
+            )
+            execute(
+                """DELETE FROM listings WHERE seller_id IN
+                   (SELECT id FROM users WHERE email LIKE ?)""",
+                pattern,
+            )
+            execute("DELETE FROM users WHERE email LIKE ?", pattern)
             get_db().commit()
 
     def post(self, client, path, data=None):
@@ -70,7 +88,7 @@ class MarketplaceTests(unittest.TestCase):
         self.assertEqual(result.status_code, 302)
         with self.app.app_context():
             record = row(
-                "SELECT id FROM buyback_requests WHERE listing_id = %s ORDER BY id DESC LIMIT 1",
+                "SELECT id FROM buyback_requests WHERE listing_id = ? ORDER BY id DESC LIMIT 1",
                 (path.rsplit("/", 1)[-1],),
             )
         return f"/requests/{record['id']}"
@@ -79,7 +97,7 @@ class MarketplaceTests(unittest.TestCase):
         client = self.register("Seller")
         self.assertIn(b"Your account is ready", client.get("/").data)
         with self.app.app_context():
-            user = row("SELECT * FROM users WHERE email = %s", ("seller" + self.domain,))
+            user = row("SELECT * FROM users WHERE email = ?", ("seller" + self.domain,))
             self.assertNotEqual(user["password_hash"], PASSWORD)
         self.assertEqual(client.post("/logout").status_code, 400)
         self.assertEqual(self.post(client, "/logout").status_code, 302)
@@ -164,7 +182,7 @@ class MarketplaceTests(unittest.TestCase):
         self.request(buyer, path)
         with self.app.app_context():
             execute(
-                "INSERT INTO users (name, email, password_hash, role) VALUES (%s, %s, %s, 'admin')",
+                "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, 'admin')",
                 ("Admin", "admin" + self.domain, generate_password_hash(PASSWORD)),
             )
             get_db().commit()
@@ -180,13 +198,13 @@ class MarketplaceTests(unittest.TestCase):
         demo_email = "demo-listings" + self.domain
         with self.app.app_context():
             demo_seller = execute(
-                "INSERT INTO users (name, email, password_hash, role) VALUES (%s, %s, %s, 'recycler')",
+                "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, 'recycler')",
                 (DEMO_NAME, demo_email, generate_password_hash(PASSWORD)),
             )
             original_id = execute(
                 """INSERT INTO listings
                    (seller_id, title, category, device_condition, description, estimate, status)
-                   VALUES (%s, 'ThinkPad T480', 'laptops', 'good', 'Previous demo description', 9000, 'archived')""",
+                   VALUES (?, 'ThinkPad T480', 'laptops', 'good', 'Previous demo description', 9000, 'archived')""",
                 (demo_seller,),
             )
             get_db().commit()
@@ -201,9 +219,9 @@ class MarketplaceTests(unittest.TestCase):
             self.assertIn("Added 0 sample listings.", second.output)
 
             with self.app.app_context():
-                original = row("SELECT description, status FROM listings WHERE id = %s", (original_id,))
+                original = row("SELECT description, status FROM listings WHERE id = ?", (original_id,))
                 self.assertEqual(original, {"description": "Previous demo description", "status": "archived"})
-                example = row("SELECT id FROM listings WHERE seller_id = %s AND title = 'iPhone 8'", (demo_seller,))
+                example = row("SELECT id FROM listings WHERE seller_id = ? AND title = 'iPhone 8'", (demo_seller,))
             buyer = self.register("Buyer")
             results = buyer.get("/browse?q=iPhone&category=phones&condition=fair")
             self.assertIn(b"Sample listing", results.data)
