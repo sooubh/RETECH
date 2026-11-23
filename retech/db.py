@@ -1,5 +1,6 @@
 import re
 from pathlib import Path
+from secrets import token_urlsafe
 
 import click
 import pymysql
@@ -8,6 +9,7 @@ from flask.cli import with_appcontext
 from werkzeug.security import generate_password_hash
 
 from .catalog import estimate_value
+from .demo import DEMO_EMAIL, DEMO_LISTINGS, DEMO_NAME
 
 
 def connect(config):
@@ -77,6 +79,8 @@ def create_admin(name, email, password):
     name, email = name.strip(), email.strip().lower()
     if not name or len(name) > 80 or not valid_email(email) or not 8 <= len(password) <= 128:
         raise click.ClickException("Enter a valid name, email and password (8–128 characters).")
+    if email == DEMO_EMAIL:
+        raise click.ClickException("Choose a different email address.")
     try:
         execute(
             "INSERT INTO users (name, email, password_hash, role) VALUES (%s, %s, %s, 'admin')",
@@ -95,30 +99,31 @@ def valid_email(email):
 @click.command("seed-demo")
 @with_appcontext
 def seed_demo():
-    from secrets import token_urlsafe
-
-    email = "demo-listings@retech.example"
-    if row("SELECT id FROM users WHERE email = %s", (email,)):
-        click.echo("Demo listings are already installed.")
-        return
-    seller = execute(
-        "INSERT INTO users (name, email, password_hash, role) VALUES (%s, %s, %s, 'recycler')",
-        ("RETECH Demo", email, generate_password_hash(token_urlsafe(32))),
+    execute(
+        """INSERT INTO users (name, email, password_hash, role) VALUES (%s, %s, %s, 'recycler')
+           ON DUPLICATE KEY UPDATE id = id""",
+        (DEMO_NAME, DEMO_EMAIL, generate_password_hash(token_urlsafe(32))),
     )
-    listings = [
-        ("Rechargeable battery pack", "batteries", "fair", "Demo listing for a used rechargeable battery pack with reduced capacity."),
-        ("USB-C charger and cable", "chargers", "excellent", "Demo listing for a working USB-C wall charger with braided cable."),
-        ("ThinkPad T480", "laptops", "good", "Demo listing for a working ThinkPad with light wear on the lid."),
-        ("Samsung Galaxy A52", "phones", "good", "Demo listing for a working phone with minor scratches. Charger included."),
-    ]
-    for title, category, condition, description in listings:
+    account = row("SELECT id, email, name, role FROM users WHERE email = %s FOR UPDATE", (DEMO_EMAIL,))
+    if (account["email"], account["name"], account["role"]) != (DEMO_EMAIL, DEMO_NAME, "recycler"):
+        raise click.ClickException("The reserved demo email already belongs to another account.")
+
+    seller_id = account["id"]
+    existing = {
+        item["title"] for item in rows("SELECT title FROM listings WHERE seller_id = %s FOR UPDATE", (seller_id,))
+    }
+    added = 0
+    for title, (category, condition, description, _) in DEMO_LISTINGS.items():
+        if title in existing:
+            continue
         execute(
             """INSERT INTO listings (seller_id, title, category, device_condition, description, estimate)
                VALUES (%s, %s, %s, %s, %s, %s)""",
-            (seller, title, category, condition, description, estimate_value(category, condition)),
+            (seller_id, title, category, condition, description, estimate_value(category, condition)),
         )
+        added += 1
     get_db().commit()
-    click.echo("Demo listings added.")
+    click.echo(f"Added {added} sample listings. {len(DEMO_LISTINGS) - added} were already installed.")
 
 
 def register_commands(app):

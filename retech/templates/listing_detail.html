@@ -6,17 +6,19 @@
   <a class="back-link" href="{{ url_for('site.my_listings') if is_owner else url_for('site.browse') }}">← {{ 'My listings' if is_owner else 'Marketplace' }}</a>
   <div class="detail-grid">
     <figure class="detail-image {{ listing.category }}">
-      {% if listing.category != 'other' %}
-        <img src="{{ url_for('static', filename='images/' ~ listing.category ~ '.webp') }}" alt="" width="768" height="512">
-        <figcaption>Category photo</figcaption>
-      {% else %}
-        <span class="device-placeholder" aria-hidden="true">↻</span>
-      {% endif %}
+      <img src="{{ url_for('static', filename='images/' ~ listing_photo(listing) ~ '.webp') }}" alt="" width="768" height="512">
+      <figcaption>{{ 'Reference photo' if listing.sample else 'Category photo' }}</figcaption>
     </figure>
     <div class="detail-copy">
       <div class="detail-meta">{{ categories[listing.category][0] }} {{ status(listing.status) }}</div>
       <h1>{{ listing.title }}</h1>
-      <p class="detail-seller">Listed by {{ listing.seller }}{% if listing.seller_role == 'recycler' %} · Recycling partner{% endif %}</p>
+      <p class="detail-seller">
+        {% if listing.sample %}
+          Sample listing
+        {% else %}
+          Listed by {{ listing.seller }}{% if listing.seller_role == 'recycler' %} · Recycling partner{% endif %}
+        {% endif %}
+      </p>
       <dl class="detail-facts">
         <div><dt>Condition</dt><dd>{{ conditions[listing.device_condition][0] }}</dd></div>
         <div><dt>Estimated buyback value</dt><dd>{{ listing.estimate | money }}</dd></div>
@@ -37,6 +39,8 @@
         </div>
       {% elif active_request %}
         <a class="button" href="{{ url_for('site.history' if listing.status == 'sold' else 'site.requests_view') }}">View your request →</a>
+      {% elif listing.sample %}
+        <p class="sample-notice">Sample listings are for browsing. Choose a device listed by a member to send a request.</p>
       {% elif listing.status == 'available' and g.user %}
         <form method="post" class="field-stack request-form" action="{{ url_for('site.make_request', listing_id=listing.id) }}">
           <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">

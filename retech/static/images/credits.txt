@@ -1,0 +1,72 @@
+RETECH photo credits
+The project uses photographs from Wikimedia Commons. Local WebP copies were resized and, where needed, cropped or padded to fit the page.
+
+hero.webp
+Photographer or source: www.Pixel.la Free Stock Photos (alternative source credited by Commons to Alejandro Escamilla)
+Original: https://commons.wikimedia.org/wiki/File:Apple-iphone-laptop-notebook_%2824216913612%29.jpg
+License: CC0 — https://creativecommons.org/publicdomain/zero/1.0/
+
+phones.webp
+Photographer or source: Habib M'henni
+Original: https://commons.wikimedia.org/wiki/File:Samsung_A50%2C_2019_by_Dyolf77%2C_DSC_1128.jpg
+License: CC BY 4.0 — https://creativecommons.org/licenses/by/4.0
+
+laptops.webp
+Photographer or source: Elizabeth K. Joseph
+Original: https://commons.wikimedia.org/wiki/File:ThinkPad_T480.jpg
+License: CC BY 2.0 — https://creativecommons.org/licenses/by/2.0
+
+chargers.webp
+Photographer or source: 4300streetcar
+Original: https://commons.wikimedia.org/wiki/File:Silicon_vs_GaN_30W_USB-C_chargers.jpg
+License: CC BY 4.0 — https://creativecommons.org/licenses/by/4.0
+
+batteries.webp
+Photographer or source: Pohled 111
+Original: https://commons.wikimedia.org/wiki/File:Eneloop_-_nab%C3%ADjec%C3%AD_baterie_AA_%28HR6%29.jpg
+License: CC BY-SA 4.0 — https://creativecommons.org/licenses/by-sa/4.0
+
+other.webp
+Photographer or source: Raimond Spekking
+Original: https://commons.wikimedia.org/wiki/File:Logitech_M185-2899.jpg
+License: CC BY-SA 4.0 — https://creativecommons.org/licenses/by-sa/4.0
+
+battery-pack.webp
+Photographer or source: Jacek Halicki
+Original: https://commons.wikimedia.org/wiki/File:2023_Powerbank_Anker_Powercore_5000mAh.jpg
+License: CC BY-SA 4.0 — https://creativecommons.org/licenses/by-sa/4.0
+
+usb-batteries.webp
+Photographer or source: Inductiveload
+Original: https://commons.wikimedia.org/wiki/File:USBcells.jpg
+License: Public domain
+
+keyboard.webp
+Photographer or source: Raimond Spekking
+Original: https://commons.wikimedia.org/wiki/File:Logitech_K260-0006.jpg
+License: CC BY-SA 4.0 — https://creativecommons.org/licenses/by-sa/4.0
+
+tablet.webp
+Photographer or source: Tom Morris
+Original: https://commons.wikimedia.org/wiki/File:IPad_2_front_view.jpg
+License: CC BY 3.0 — https://creativecommons.org/licenses/by/3.0
+
+iphone-8.webp
+Photographer or source: Tinh tế Photo
+Original: https://commons.wikimedia.org/wiki/File:IPhone_8_silver_with_white_rear.jpg
+License: CC0 — https://creativecommons.org/publicdomain/zero/1.0/
+
+macbook-air.webp
+Photographer or source: Sam Lionheart (iFixit)
+Original: https://commons.wikimedia.org/wiki/File:Macbook_Air.jpg
+License: CC BY-SA 3.0 — https://creativecommons.org/licenses/by-sa/3.0
+
+anker-charger.webp
+Photographer or source: www.digitalpush.net
+Original: https://commons.wikimedia.org/wiki/File:Anker-PowerPort-40W-5-Port-USB-Ladegeraet.jpg
+License: CC BY 4.0 — https://creativecommons.org/licenses/by/4.0
+
+headphones.webp
+Photographer or source: Fletcher6
+Original: https://commons.wikimedia.org/wiki/File:Audio_Technica_ATH-M50_Headphones.jpg
+License: CC BY 4.0 — https://creativecommons.org/licenses/by/4.0

@@ -11,7 +11,7 @@
       <a href="{{ url_for('site.new_listing') }}" class="hero-secondary">List a device <span aria-hidden="true">→</span></a>
     </div>
   </div>
-  <img class="hero-image" src="{{ url_for('static', filename='images/hero.webp') }}" alt="A used laptop, phone, earbuds and charging cable on a yellow tabletop" width="1280" height="853" fetchpriority="high">
+  <img class="hero-image" src="{{ url_for('static', filename='images/hero.webp') }}" alt="A laptop and phone on a wooden desk" width="1280" height="854" fetchpriority="high">
 </section>
 <section class="market-section" aria-labelledby="latest">
   <div class="section-heading">
@@ -23,6 +23,14 @@
   {% else %}
     <div class="empty"><h3>The marketplace is open</h3><p>Have an unused device? Add the first listing.</p><a class="button compact" href="{{ url_for('site.new_listing') }}">List a device</a></div>
   {% endif %}
+</section>
+<section class="category-section" aria-labelledby="category-title">
+  <h2 id="category-title">Browse by category</h2>
+  <nav class="category-links" aria-label="Device categories">
+    {% for key, category in categories.items() %}
+      <a class="button secondary" href="{{ url_for('site.browse', category=key) }}">{{ category[0] }} <span class="diagonal-arrow" aria-hidden="true"></span></a>
+    {% endfor %}
+  </nav>
 </section>
 <section id="how-it-works" class="how-section" aria-labelledby="how-title">
   <h2 id="how-title">How it works</h2>

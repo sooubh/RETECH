@@ -2,12 +2,14 @@ import os
 import re
 import unittest
 from concurrent.futures import ThreadPoolExecutor
+from unittest.mock import patch
 from uuid import uuid4
 
 from werkzeug.security import generate_password_hash
 
 from retech import create_app
 from retech.db import execute, get_db, initialize_database, row
+from retech.demo import DEMO_LISTINGS, DEMO_NAME
 
 PASSWORD = "test-password-123"
 LISTING = {
@@ -173,6 +175,42 @@ class MarketplaceTests(unittest.TestCase):
         self.assertEqual(self.post(admin, path + "/archive").location, "/admin")
         self.assertIn(b"Archived", admin.get("/admin").data)
         self.assertIn(b"Declined", buyer.get("/requests").data)
+
+    def test_demo_seed_preserves_old_listings_and_adds_new_ones(self):
+        demo_email = "demo-listings" + self.domain
+        with self.app.app_context():
+            demo_seller = execute(
+                "INSERT INTO users (name, email, password_hash, role) VALUES (%s, %s, %s, 'recycler')",
+                (DEMO_NAME, demo_email, generate_password_hash(PASSWORD)),
+            )
+            original_id = execute(
+                """INSERT INTO listings
+                   (seller_id, title, category, device_condition, description, estimate, status)
+                   VALUES (%s, 'ThinkPad T480', 'laptops', 'good', 'Previous demo description', 9000, 'archived')""",
+                (demo_seller,),
+            )
+            get_db().commit()
+
+        with patch("retech.db.DEMO_EMAIL", demo_email), patch("retech.views.DEMO_EMAIL", demo_email):
+            runner = self.app.test_cli_runner()
+            first = runner.invoke(args=["seed-demo"])
+            self.assertEqual(first.exit_code, 0, first.output)
+            self.assertIn(f"Added {len(DEMO_LISTINGS) - 1} sample listings.", first.output)
+            second = runner.invoke(args=["seed-demo"])
+            self.assertEqual(second.exit_code, 0, second.output)
+            self.assertIn("Added 0 sample listings.", second.output)
+
+            with self.app.app_context():
+                original = row("SELECT description, status FROM listings WHERE id = %s", (original_id,))
+                self.assertEqual(original, {"description": "Previous demo description", "status": "archived"})
+                example = row("SELECT id FROM listings WHERE seller_id = %s AND title = 'iPhone 8'", (demo_seller,))
+            buyer = self.register("Buyer")
+            results = buyer.get("/browse?q=iPhone&category=phones&condition=fair")
+            self.assertIn(b"Sample listing", results.data)
+            self.assertIn(b"/static/images/iphone-8.webp", results.data)
+            path = f"/listings/{example['id']}"
+            self.assertIn(b"Sample listings are for browsing", buyer.get(path).data)
+            self.assertEqual(self.post(buyer, path + "/request").status_code, 409)
 
     def test_competing_accepts_create_only_one_reservation(self):
         first_seller_client = self.register("Seller")

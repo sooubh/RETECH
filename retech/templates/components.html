@@ -2,16 +2,13 @@
   <article class="listing-card">
     <a class="listing-link" href="{{ url_for('site.listing_detail', listing_id=listing.id) }}">
       <div class="card-image {{ listing.category }}">
-        {% if listing.category != 'other' %}
-          <img src="{{ url_for('static', filename='images/' ~ listing.category ~ '.webp') }}" alt="" width="768" height="512" loading="lazy">
-        {% else %}
-          <span class="device-placeholder" aria-hidden="true">↻</span>
-        {% endif %}
+        <img src="{{ url_for('static', filename='images/' ~ listing_photo(listing) ~ '.webp') }}" alt="" width="768" height="512" loading="lazy">
         <span class="card-tag">{{ categories[listing.category][0] }}</span>
       </div>
       <div class="card-body">
         <div class="card-meta">
           {{ conditions[listing.device_condition][0] }}
+          {% if listing.sample %} · <span>Sample listing</span>{% endif %}
           {% if show_status %} · <span>{{ listing.status | capitalize }}</span>{% endif %}
         </div>
         <h3>{{ listing.title }}</h3>

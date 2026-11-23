@@ -6,6 +6,7 @@ from flask import Flask, abort, g, render_template, request, session
 
 from .catalog import CATEGORIES, CONDITIONS, money
 from .db import register_commands, row
+from .demo import listing_photo
 
 
 def create_app(config=None):
@@ -33,7 +34,7 @@ def create_app(config=None):
 
     app.register_blueprint(bp)
     app.jinja_env.filters["money"] = money
-    app.jinja_env.globals.update(categories=CATEGORIES, conditions=CONDITIONS)
+    app.jinja_env.globals.update(categories=CATEGORIES, conditions=CONDITIONS, listing_photo=listing_photo)
 
     def csrf_token():
         if "csrf_token" not in session:

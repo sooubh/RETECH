@@ -56,8 +56,8 @@ button { cursor: pointer; }
 .primary-nav, .header-actions, .account-inner { display: flex; align-items: center; }
 .primary-nav { gap: 30px; }
 .header-actions { justify-content: end; gap: 22px; }
-.primary-nav a, .account-nav a, .text-button, .footer-inner > a:last-child { color: var(--ink); font-size: .94rem; font-weight: 700; text-decoration: none; }
-.primary-nav a:hover, .account-nav a:hover, .text-button:hover, .footer-inner > a:last-child:hover { text-decoration: underline; text-underline-offset: 4px; }
+.primary-nav a, .account-nav a, .text-button, .footer-links a { color: var(--ink); font-size: .94rem; font-weight: 700; text-decoration: none; }
+.primary-nav a:hover, .account-nav a:hover, .text-button:hover, .footer-links a:hover { text-decoration: underline; text-underline-offset: 4px; }
 .text-button { background: transparent; border: 0; padding: 0; white-space: nowrap; }
 .account-nav { background: #f0f2e8; border-top: 1px solid var(--line); }
 .account-inner { min-height: 48px; gap: 24px; }
@@ -87,7 +87,7 @@ button { cursor: pointer; }
 .hero :focus-visible { outline-color: var(--lime); }
 .hero-image { width: 100%; height: 100%; min-height: 0; object-fit: cover; object-position: center; }
 
-.market-section, .how-section { margin-top: 43px; }
+.market-section, .category-section, .how-section { margin-top: 43px; }
 .section-heading { display: flex; align-items: end; justify-content: space-between; gap: 14px; margin-bottom: 17px; }
 .section-heading > .button { align-self: end; }
 .section-heading p, .page-heading p { margin-top: 6px; color: var(--muted); }
@@ -102,7 +102,6 @@ button { cursor: pointer; }
 .chargers { background: #f2e4ab; }
 .batteries { background: #e8c4ce; }
 .other { background: #e0ebe0; }
-.device-placeholder { font-size: 4.5rem; line-height: 1; color: #485c43; }
 .card-tag { position: absolute; top: 11px; left: 11px; color: var(--ink); background: #fffffff0; padding: 4px 8px; border-radius: 5px; font-size: .72rem; font-weight: 700; }
 .card-body { padding: 14px 13px 12px; flex: 1; display: flex; flex-direction: column; }
 .card-meta { font-size: .77rem; color: var(--muted); margin-bottom: 4px; }
@@ -112,6 +111,9 @@ button { cursor: pointer; }
 .card-bottom div span { display: block; color: var(--muted); font-size: .72rem; }
 .card-arrow { display: grid; place-items: center; flex: 0 0 31px; height: 31px; border: 1px solid var(--line); border-radius: 50%; color: var(--ink); }
 .listing-card:hover .card-arrow { background: var(--lime); border-color: var(--lime); }
+.category-links { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.category-links .button { justify-content: space-between; text-align: left; gap: 9px; }
+.category-links .diagonal-arrow { flex-shrink: 0; }
 
 .how-section { scroll-margin-top: 22px; padding: 26px 30px; border-radius: var(--radius); border: 1px solid var(--line); background: #eef2e7; }
 .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px; margin-top: 20px; }
@@ -120,7 +122,7 @@ button { cursor: pointer; }
 .site-footer { border-top: 1px solid var(--line); margin-top: 48px; }
 .footer-inner { min-height: 83px; display: flex; align-items: center; gap: 24px; }
 .footer-inner p { color: var(--muted); font-size: .9rem; }
-.footer-inner > a:last-child { margin-left: auto; }
+.footer-links { display: flex; flex-wrap: wrap; gap: 12px 20px; margin-left: auto; }
 
 .page { padding-top: 39px; }
 .page-heading { margin-bottom: 24px; }
@@ -174,6 +176,7 @@ small { color: var(--muted); font-size: .83rem; font-weight: 400; }
 .detail-facts dd { font-weight: 700; font-size: 1.2rem; margin-top: 3px; }
 .description { white-space: pre-wrap; overflow-wrap: anywhere; }
 .detail-copy .description { margin: 7px 0 18px; }
+.sample-notice { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: #eef2e7; color: var(--muted); font-size: .9rem; }
 .request-form { max-width: 370px; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .request-list { display: grid; gap: 12px; max-width: 920px; }
@@ -217,11 +220,13 @@ tbody tr + tr { border-top: 1px solid var(--line); }
   .hero h1 { font-size: clamp(3.5rem, 11vw, 5.5rem); }
   .hero-description { margin-top: 15px; }
   .hero-actions { margin-top: 18px; }
-  .market-section, .how-section { margin-top: 31px; }
+  .market-section, .category-section, .how-section { margin-top: 31px; }
   .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .category-links { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .steps { grid-template-columns: 1fr; gap: 16px; }
   .footer-inner { padding-block: 16px; gap: 8px 15px; flex-wrap: wrap; min-height: auto; }
   .footer-inner p { flex-basis: 100%; order: 1; }
+  .footer-links { gap: 8px 13px; }
   .page { padding-top: 26px; }
   .filters { grid-template-columns: 1fr 1fr; }
   .filters > :first-child { grid-column: 1 / -1; }

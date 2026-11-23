@@ -53,7 +53,10 @@
   <div class="wrap footer-inner">
     <a class="brand" href="{{ url_for('site.home') }}" aria-label="RETECH home"><span class="brand-mark" aria-hidden="true">↻</span>RETECH<span class="brand-dot">.</span></a>
     <p>Give unused electronics a second life.</p>
-    <a href="{{ url_for('site.browse') }}">Marketplace <span class="diagonal-arrow" aria-hidden="true"></span></a>
+    <nav class="footer-links" aria-label="Footer navigation">
+      <a href="{{ url_for('site.browse') }}">Marketplace</a>
+      <a href="{{ url_for('static', filename='images/credits.txt') }}">Photo credits <span class="diagonal-arrow" aria-hidden="true"></span></a>
+    </nav>
   </div>
 </footer>
 </body>

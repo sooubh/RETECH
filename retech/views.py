@@ -8,6 +8,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from .catalog import CATEGORIES, CONDITIONS, estimate_value
 from .db import execute, get_db, row, rows, valid_email
+from .demo import DEMO_EMAIL
 
 bp = Blueprint("site", __name__)
 
@@ -43,7 +44,12 @@ def after_authentication():
 
 @bp.get("/")
 def home():
-    listings = rows("SELECT * FROM listings WHERE status = 'available' ORDER BY id DESC LIMIT 4")
+    listings = rows(
+        """SELECT l.*, CAST(u.email AS BINARY) = CAST(%s AS BINARY) AS sample
+           FROM listings l JOIN users u ON u.id = l.seller_id
+           WHERE l.status = 'available' ORDER BY l.id DESC LIMIT 4""",
+        (DEMO_EMAIL,),
+    )
     return render_template("home.html", listings=listings)
 
 
@@ -53,22 +59,24 @@ def browse():
     category = request.args.get("category", "")
     condition = request.args.get("condition", "")
     page = max(1, min(request.args.get("page", 1, type=int), 1000000))
-    conditions = ["status = 'available'"]
+    conditions = ["l.status = 'available'"]
     args = []
     if query:
-        conditions.append("(LOCATE(%s, title) > 0 OR LOCATE(%s, description) > 0)")
+        conditions.append("(LOCATE(%s, l.title) > 0 OR LOCATE(%s, l.description) > 0)")
         args.extend((query, query))
     if category in CATEGORIES:
-        conditions.append("category = %s")
+        conditions.append("l.category = %s")
         args.append(category)
     if condition in CONDITIONS:
-        conditions.append("device_condition = %s")
+        conditions.append("l.device_condition = %s")
         args.append(condition)
     where = " AND ".join(conditions)
-    total = row(f"SELECT COUNT(*) AS count FROM listings WHERE {where}", args)["count"]
+    total = row(f"SELECT COUNT(*) AS count FROM listings l WHERE {where}", args)["count"]
     listings = rows(
-        f"SELECT * FROM listings WHERE {where} ORDER BY id DESC LIMIT 12 OFFSET %s",
-        (*args, (page - 1) * 12),
+        f"""SELECT l.*, CAST(u.email AS BINARY) = CAST(%s AS BINARY) AS sample
+            FROM listings l JOIN users u ON u.id = l.seller_id
+            WHERE {where} ORDER BY l.id DESC LIMIT 12 OFFSET %s""",
+        (DEMO_EMAIL, *args, (page - 1) * 12),
     )
     return render_template(
         "browse.html", listings=listings, total=total, page=page, has_next=page * 12 < total,
@@ -90,6 +98,8 @@ def register():
             error = "Enter your name (up to 80 characters)."
         elif not valid_email(email):
             error = "Enter a valid email address."
+        elif email == DEMO_EMAIL:
+            error = "Enter a different email address."
         elif not 8 <= len(password) <= 128:
             error = "Use a password between 8 and 128 characters."
         elif role not in ("member", "recycler"):
@@ -191,9 +201,10 @@ def new_listing():
 @bp.get("/listings/<int:listing_id>")
 def listing_detail(listing_id):
     listing = row(
-        """SELECT l.*, u.name AS seller, u.role AS seller_role
+        """SELECT l.*, u.name AS seller, u.role AS seller_role,
+                  CAST(u.email AS BINARY) = CAST(%s AS BINARY) AS sample
            FROM listings l JOIN users u ON u.id = l.seller_id WHERE l.id = %s""",
-        (listing_id,),
+        (DEMO_EMAIL, listing_id),
     )
     if not listing:
         abort(404)
@@ -275,6 +286,9 @@ def make_request(listing_id):
         abort(403)
     if listing["status"] != "available":
         abort(409, "This listing is no longer available.")
+    seller = row("SELECT email FROM users WHERE id = %s", (listing["seller_id"],))
+    if seller["email"] == DEMO_EMAIL:
+        abort(409, "Sample listings are for browsing. Choose a device listed by a member to send a request.")
     if row(
         """SELECT id FROM buyback_requests WHERE listing_id = %s AND buyer_id = %s
            AND status = 'pending' LIMIT 1 FOR UPDATE""",
