@@ -1,6 +1,6 @@
 from functools import wraps
 
-import pymysql
+import sqlite3
 from flask import (
     Blueprint, abort, flash, g, jsonify, redirect, render_template, request, session, url_for,
 )
@@ -45,7 +45,7 @@ def after_authentication():
 @bp.get("/")
 def home():
     listings = rows(
-        """SELECT l.*, CAST(u.email AS BINARY) = CAST(%s AS BINARY) AS sample
+        """SELECT l.*, u.email = ? COLLATE BINARY AS sample
            FROM listings l JOIN users u ON u.id = l.seller_id
            WHERE l.status = 'available' ORDER BY l.id DESC LIMIT 4""",
         (DEMO_EMAIL,),
@@ -62,20 +62,20 @@ def browse():
     conditions = ["l.status = 'available'"]
     args = []
     if query:
-        conditions.append("(LOCATE(%s, l.title) > 0 OR LOCATE(%s, l.description) > 0)")
+        conditions.append("(instr(lower(l.title), lower(?)) > 0 OR instr(lower(l.description), lower(?)) > 0)")
         args.extend((query, query))
     if category in CATEGORIES:
-        conditions.append("l.category = %s")
+        conditions.append("l.category = ?")
         args.append(category)
     if condition in CONDITIONS:
-        conditions.append("l.device_condition = %s")
+        conditions.append("l.device_condition = ?")
         args.append(condition)
     where = " AND ".join(conditions)
     total = row(f"SELECT COUNT(*) AS count FROM listings l WHERE {where}", args)["count"]
     listings = rows(
-        f"""SELECT l.*, CAST(u.email AS BINARY) = CAST(%s AS BINARY) AS sample
+        f"""SELECT l.*, u.email = ? COLLATE BINARY AS sample
             FROM listings l JOIN users u ON u.id = l.seller_id
-            WHERE {where} ORDER BY l.id DESC LIMIT 12 OFFSET %s""",
+            WHERE {where} ORDER BY l.id DESC LIMIT 12 OFFSET ?""",
         (DEMO_EMAIL, *args, (page - 1) * 12),
     )
     return render_template(
@@ -107,11 +107,11 @@ def register():
         if error is None:
             try:
                 user_id = execute(
-                    "INSERT INTO users (name, email, password_hash, role) VALUES (%s, %s, %s, %s)",
+                    "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)",
                     (name, email, generate_password_hash(password), role),
                 )
                 get_db().commit()
-            except pymysql.IntegrityError:
+            except sqlite3.IntegrityError:
                 error = "An account already exists for that email."
             else:
                 session.clear()
@@ -129,7 +129,7 @@ def login():
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
-        user = row("SELECT id, password_hash FROM users WHERE email = %s", (email,)) if valid_email(email) else None
+        user = row("SELECT id, password_hash FROM users WHERE email = ?", (email,)) if valid_email(email) else None
         if user and len(password) <= 128 and check_password_hash(user["password_hash"], password):
             session.clear()
             session["user_id"] = user["id"]
@@ -176,14 +176,14 @@ def listing_form(listing=None):
             if listing:
                 listing_id = listing["id"]
                 execute(
-                    """UPDATE listings SET title = %s, category = %s, device_condition = %s,
-                       description = %s, estimate = %s WHERE id = %s""",
+                    """UPDATE listings SET title = ?, category = ?, device_condition = ?,
+                       description = ?, estimate = ? WHERE id = ?""",
                     (*fields, listing_id),
                 )
             else:
                 listing_id = execute(
                     """INSERT INTO listings (title, category, device_condition, description, estimate, seller_id)
-                       VALUES (%s, %s, %s, %s, %s, %s)""",
+                       VALUES (?, ?, ?, ?, ?, ?)""",
                     (*fields, g.user["id"]),
                 )
             get_db().commit()
@@ -202,8 +202,8 @@ def new_listing():
 def listing_detail(listing_id):
     listing = row(
         """SELECT l.*, u.name AS seller, u.role AS seller_role,
-                  CAST(u.email AS BINARY) = CAST(%s AS BINARY) AS sample
-           FROM listings l JOIN users u ON u.id = l.seller_id WHERE l.id = %s""",
+                  u.email = ? COLLATE BINARY AS sample
+           FROM listings l JOIN users u ON u.id = l.seller_id WHERE l.id = ?""",
         (DEMO_EMAIL, listing_id),
     )
     if not listing:
@@ -214,12 +214,12 @@ def listing_detail(listing_id):
     is_admin = g.user and g.user["role"] == "admin"
     if is_owner and listing["status"] == "available":
         can_edit = not row(
-            "SELECT id FROM buyback_requests WHERE listing_id = %s AND status = 'pending' LIMIT 1",
+            "SELECT id FROM buyback_requests WHERE listing_id = ? AND status = 'pending' LIMIT 1",
             (listing_id,),
         )
     if g.user and not is_owner:
         active_request = row(
-            """SELECT id FROM buyback_requests WHERE listing_id = %s AND buyer_id = %s
+            """SELECT id FROM buyback_requests WHERE listing_id = ? AND buyer_id = ?
                AND status IN ('pending', 'accepted', 'completed')""",
             (listing_id, g.user["id"]),
         )
@@ -232,7 +232,10 @@ def listing_detail(listing_id):
 
 
 def lock_listing(listing_id):
-    listing = row("SELECT * FROM listings WHERE id = %s FOR UPDATE", (listing_id,))
+    # SQLite serializes write actions so two buyers cannot reserve one device.
+    if request.method == "POST" and not get_db().in_transaction:
+        get_db().execute("BEGIN IMMEDIATE")
+    listing = row("SELECT * FROM listings WHERE id = ?", (listing_id,))
     if not listing:
         abort(404)
     return listing
@@ -245,7 +248,7 @@ def edit_listing(listing_id):
     if g.user["id"] != listing["seller_id"]:
         abort(403)
     if listing["status"] != "available" or row(
-        "SELECT id FROM buyback_requests WHERE listing_id = %s AND status = 'pending' LIMIT 1 FOR UPDATE",
+        "SELECT id FROM buyback_requests WHERE listing_id = ? AND status = 'pending' LIMIT 1",
         (listing_id,),
     ):
         abort(409, "Resolve pending requests before editing an available listing.")
@@ -261,9 +264,9 @@ def archive_listing(listing_id):
         abort(403)
     if listing["status"] != "available":
         abort(409, "Only available listings can be archived.")
-    execute("UPDATE listings SET status = 'archived' WHERE id = %s", (listing_id,))
+    execute("UPDATE listings SET status = 'archived' WHERE id = ?", (listing_id,))
     execute(
-        "UPDATE buyback_requests SET status = 'declined' WHERE listing_id = %s AND status = 'pending'",
+        "UPDATE buyback_requests SET status = 'declined' WHERE listing_id = ? AND status = 'pending'",
         (listing_id,),
     )
     get_db().commit()
@@ -274,7 +277,7 @@ def archive_listing(listing_id):
 @bp.get("/my-listings")
 @login_required
 def my_listings():
-    listings = rows("SELECT * FROM listings WHERE seller_id = %s ORDER BY id DESC", (g.user["id"],))
+    listings = rows("SELECT * FROM listings WHERE seller_id = ? ORDER BY id DESC", (g.user["id"],))
     return render_template("my_listings.html", listings=listings)
 
 
@@ -286,12 +289,12 @@ def make_request(listing_id):
         abort(403)
     if listing["status"] != "available":
         abort(409, "This listing is no longer available.")
-    seller = row("SELECT email FROM users WHERE id = %s", (listing["seller_id"],))
+    seller = row("SELECT email FROM users WHERE id = ?", (listing["seller_id"],))
     if seller["email"] == DEMO_EMAIL:
         abort(409, "Sample listings are for browsing. Choose a device listed by a member to send a request.")
     if row(
-        """SELECT id FROM buyback_requests WHERE listing_id = %s AND buyer_id = %s
-           AND status = 'pending' LIMIT 1 FOR UPDATE""",
+        """SELECT id FROM buyback_requests WHERE listing_id = ? AND buyer_id = ?
+           AND status = 'pending' LIMIT 1""",
         (listing_id, g.user["id"]),
     ):
         abort(409, "You already have a pending request for this device.")
@@ -304,7 +307,7 @@ def make_request(listing_id):
         return redirect(url_for("site.listing_detail", listing_id=listing_id))
     execute(
         """INSERT INTO buyback_requests (listing_id, buyer_id, kind, offer, exchange_details)
-           VALUES (%s, %s, %s, %s, %s)""",
+           VALUES (?, ?, ?, ?, ?)""",
         (
             listing_id, g.user["id"], kind, listing["estimate"] if kind == "buyback" else 0,
             details if kind == "exchange" else "",
@@ -326,7 +329,7 @@ def requests_view():
            JOIN listings l ON l.id = r.listing_id
            JOIN users seller ON seller.id = l.seller_id
            JOIN users buyer ON buyer.id = r.buyer_id
-           WHERE (l.seller_id = %s OR r.buyer_id = %s) AND r.status <> 'completed'
+           WHERE (l.seller_id = ? OR r.buyer_id = ?) AND r.status <> 'completed'
            ORDER BY r.id DESC""",
         (g.user["id"], g.user["id"]),
     )
@@ -336,11 +339,11 @@ def requests_view():
 @bp.post("/requests/<int:request_id>/<action>")
 @login_required
 def manage_request(request_id, action):
-    request_listing = row("SELECT listing_id FROM buyback_requests WHERE id = %s", (request_id,))
+    request_listing = row("SELECT listing_id FROM buyback_requests WHERE id = ?", (request_id,))
     if not request_listing:
         abort(404)
     listing = lock_listing(request_listing["listing_id"])
-    buyback = row("SELECT * FROM buyback_requests WHERE id = %s FOR UPDATE", (request_id,))
+    buyback = row("SELECT * FROM buyback_requests WHERE id = ?", (request_id,))
     seller = listing["seller_id"] == g.user["id"]
     buyer = buyback["buyer_id"] == g.user["id"]
     if not seller and not buyer:
@@ -361,19 +364,19 @@ def manage_request(request_id, action):
     if buyback["status"] != expected_request or listing["status"] != expected_listing:
         abort(409, "This request has already changed.")
 
-    execute("UPDATE buyback_requests SET status = %s WHERE id = %s", (new_status, request_id))
+    execute("UPDATE buyback_requests SET status = ? WHERE id = ?", (new_status, request_id))
     if action == "accept":
-        execute("UPDATE listings SET status = 'reserved' WHERE id = %s", (listing["id"],))
+        execute("UPDATE listings SET status = 'reserved' WHERE id = ?", (listing["id"],))
         execute(
             """UPDATE buyback_requests SET status = 'declined'
-               WHERE listing_id = %s AND status = 'pending'""",
+               WHERE listing_id = ? AND status = 'pending'""",
             (listing["id"],),
         )
     elif action == "cancel" and buyback["status"] == "accepted":
-        execute("UPDATE listings SET status = 'available' WHERE id = %s", (listing["id"],))
+        execute("UPDATE listings SET status = 'available' WHERE id = ?", (listing["id"],))
     elif action == "complete":
-        execute("UPDATE listings SET status = 'sold' WHERE id = %s", (listing["id"],))
-        execute("INSERT INTO transactions (request_id, amount) VALUES (%s, %s)", (request_id, buyback["offer"]))
+        execute("UPDATE listings SET status = 'sold' WHERE id = ?", (listing["id"],))
+        execute("INSERT INTO transactions (request_id, amount) VALUES (?, ?)", (request_id, buyback["offer"]))
     get_db().commit()
     flash(f"Request {new_status}.", "success")
     return redirect(url_for("site.history" if action == "complete" else "site.requests_view"))
@@ -390,7 +393,7 @@ def history():
            JOIN listings l ON l.id = r.listing_id
            JOIN users seller ON seller.id = l.seller_id
            JOIN users buyer ON buyer.id = r.buyer_id
-           WHERE l.seller_id = %s OR r.buyer_id = %s
+           WHERE l.seller_id = ? OR r.buyer_id = ?
            ORDER BY t.id DESC""",
         (g.user["id"], g.user["id"]),
     )
