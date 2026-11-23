@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from secrets import compare_digest, token_urlsafe
 
 from dotenv import load_dotenv
@@ -12,13 +13,18 @@ from .demo import listing_photo
 def create_app(config=None):
     load_dotenv()
     app = Flask(__name__)
+    # Store a generated local secret so sessions survive app restarts.
+    secret = os.getenv("RETECH_SECRET_KEY")
+    if not secret:
+        secret_file = Path(app.instance_path) / ".secret-key"
+        secret_file.parent.mkdir(parents=True, exist_ok=True)
+        if not secret_file.exists():
+            secret_file.write_text(token_urlsafe(48), encoding="utf-8")
+            secret_file.chmod(0o600)
+        secret = secret_file.read_text(encoding="utf-8").strip()
     app.config.from_mapping(
-        SECRET_KEY=os.getenv("RETECH_SECRET_KEY"),
-        MYSQL_HOST=os.getenv("MYSQL_HOST", "127.0.0.1"),
-        MYSQL_PORT=os.getenv("MYSQL_PORT", "3306"),
-        MYSQL_DATABASE=os.getenv("MYSQL_DATABASE", "retech"),
-        MYSQL_USER=os.getenv("MYSQL_USER", "retech"),
-        MYSQL_PASSWORD=os.getenv("MYSQL_PASSWORD"),
+        SECRET_KEY=secret,
+        DATABASE=os.getenv("RETECH_DATABASE") or str(Path(app.instance_path) / "retech.sqlite3"),
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
         SESSION_COOKIE_SECURE=os.getenv("RETECH_SECURE_COOKIE") == "1",
@@ -26,9 +32,6 @@ def create_app(config=None):
     )
     if config:
         app.config.update(config)
-    if not app.config["SECRET_KEY"] or not app.config["MYSQL_PASSWORD"]:
-        raise RuntimeError("Set RETECH_SECRET_KEY and MYSQL_PASSWORD in .env. See README.md.")
-
     register_commands(app)
     from .views import bp
 
