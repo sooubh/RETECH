@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8f8f1">
+  <title>{% block title %}RETECH — E-waste buyback marketplace{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <script defer src="{{ url_for('static', filename='main.js') }}"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="{{ url_for('site.home') }}" aria-label="RETECH home"><span class="brand-mark" aria-hidden="true">↻</span>RETECH<span class="brand-dot">.</span></a>
+    <nav class="primary-nav" aria-label="Main navigation">
+      <a href="{{ url_for('site.browse') }}" {% if request.endpoint == 'site.browse' %}aria-current="page"{% endif %}>Marketplace</a>
+      {% if not g.user %}<a href="{{ url_for('site.home') }}#how-it-works">How it works</a>{% endif %}
+    </nav>
+    <div class="header-actions">
+      {% if g.user %}
+        <form action="{{ url_for('site.logout') }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="text-button" type="submit">Log out</button>
+        </form>
+      {% else %}
+        <a class="text-button" href="{{ url_for('site.login') }}">Log in</a>
+      {% endif %}
+      <a class="button compact" href="{{ url_for('site.new_listing') }}"><span aria-hidden="true">+</span> List a device</a>
+    </div>
+  </div>
+  {% if g.user %}
+    <nav class="account-nav" aria-label="Your account">
+      <div class="wrap account-inner">
+        {% for endpoint, label in [('my_listings','My listings'), ('requests_view','Requests'), ('history','Buyback history')] %}
+          <a href="{{ url_for('site.' ~ endpoint) }}" {% if request.endpoint == 'site.' ~ endpoint %}aria-current="page"{% endif %}>{{ label }}</a>
+        {% endfor %}
+        {% if g.user.role == 'admin' %}
+          <a href="{{ url_for('site.admin') }}" {% if request.endpoint == 'site.admin' %}aria-current="page"{% endif %}>Admin</a>
+        {% endif %}
+        <span class="account-name">{{ g.user.name }}</span>
+      </div>
+    </nav>
+  {% endif %}
+</header>
+<main id="main" class="wrap">
+  {% for category, message in get_flashed_messages(with_categories=true) %}
+    <div class="notice {{ category }}" role="{{ 'alert' if category == 'error' else 'status' }}">{{ message }}</div>
+  {% endfor %}
+  {% block content %}{% endblock %}
+</main>
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <a class="brand" href="{{ url_for('site.home') }}" aria-label="RETECH home"><span class="brand-mark" aria-hidden="true">↻</span>RETECH<span class="brand-dot">.</span></a>
+    <p>Give unused electronics a second life.</p>
+    <a href="{{ url_for('site.browse') }}">Marketplace <span class="diagonal-arrow" aria-hidden="true"></span></a>
+  </div>
+</footer>
+</body>
+</html>

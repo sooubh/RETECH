@@ -1,0 +1,36 @@
+{% macro listing_card(listing, show_status=false) %}
+  <article class="listing-card">
+    <a class="listing-link" href="{{ url_for('site.listing_detail', listing_id=listing.id) }}">
+      <div class="card-image {{ listing.category }}">
+        {% if listing.category != 'other' %}
+          <img src="{{ url_for('static', filename='images/' ~ listing.category ~ '.webp') }}" alt="" width="768" height="512" loading="lazy">
+        {% else %}
+          <span class="device-placeholder" aria-hidden="true">↻</span>
+        {% endif %}
+        <span class="card-tag">{{ categories[listing.category][0] }}</span>
+      </div>
+      <div class="card-body">
+        <div class="card-meta">
+          {{ conditions[listing.device_condition][0] }}
+          {% if show_status %} · <span>{{ listing.status | capitalize }}</span>{% endif %}
+        </div>
+        <h3>{{ listing.title }}</h3>
+        <div class="card-bottom">
+          <div><strong>{{ listing.estimate | money }}</strong><span>Estimated value</span></div>
+          <span class="card-arrow" aria-hidden="true"><span class="diagonal-arrow"></span></span>
+        </div>
+      </div>
+    </a>
+  </article>
+{% endmacro %}
+
+{% macro request_button(id, action, label, style='secondary') %}
+<form method="post" action="{{ url_for('site.manage_request', request_id=id, action=action) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button class="button compact {{ style }}" type="submit">{{ label }}</button>
+</form>
+{% endmacro %}
+
+{% macro status(value) %}
+  <span class="status status-{{ value }}">{{ value | capitalize }}</span>
+{% endmacro %}

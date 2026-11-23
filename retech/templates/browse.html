@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% from 'components.html' import listing_card %}
+{% block title %}Marketplace · RETECH{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="page-heading"><h1>Marketplace</h1><p>Browse available electronics for reuse, exchange or recycling.</p></div>
+  <form class="filters" method="get" action="{{ url_for('site.browse') }}">
+    <label>Search<input type="search" name="q" maxlength="100" placeholder="Search devices" value="{{ query }}"></label>
+    <label>Category<select name="category">
+      <option value="">All categories</option>
+      {% for key, item in categories.items() %}<option value="{{ key }}" {% if category == key %}selected{% endif %}>{{ item[0] }}</option>{% endfor %}
+    </select></label>
+    <label>Condition<select name="condition">
+      <option value="">All conditions</option>
+      {% for key, item in conditions.items() %}<option value="{{ key }}" {% if condition == key %}selected{% endif %}>{{ item[0] }}</option>{% endfor %}
+    </select></label>
+    <button class="button" type="submit">Search listings</button>
+  </form>
+  <div class="results-heading"><p>{{ total }} {{ 'listing' if total == 1 else 'listings' }}</p>{% if query or category or condition %}<a href="{{ url_for('site.browse') }}">Clear filters</a>{% endif %}</div>
+  {% if listings %}
+    <div class="card-grid">{% for listing in listings %}{{ listing_card(listing) }}{% endfor %}</div>
+  {% else %}
+    <div class="empty"><h2>No devices found</h2><p>Try changing your search or filters.</p></div>
+  {% endif %}
+  {% if page > 1 or has_next %}
+    <nav class="pagination" aria-label="Marketplace pages">
+      {% if page > 1 %}<a class="button secondary compact" href="{{ url_for('site.browse', page=page-1, q=query, category=category, condition=condition) }}">← Previous</a>{% endif %}
+      <span>Page {{ page }}</span>
+      {% if has_next %}<a class="button secondary compact" href="{{ url_for('site.browse', page=page+1, q=query, category=category, condition=condition) }}">Next →</a>{% endif %}
+    </nav>
+  {% endif %}
+</section>
+{% endblock %}

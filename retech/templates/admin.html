@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% from 'components.html' import status %}
+{% block title %}Admin dashboard · RETECH{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="page-heading"><h1>Admin dashboard</h1><p>Review marketplace activity and moderate listings.</p></div>
+  <dl class="stats">
+    {% for key, label in [('users','Accounts'), ('listings','Available listings'), ('requests','Open requests'), ('transactions','Completed handoffs')] %}
+      <div class="panel"><dt>{{ label }}</dt><dd>{{ counts[key] }}</dd></div>
+    {% endfor %}
+  </dl>
+  <h2 class="table-title">Listings</h2>
+  {% if listings %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Device</th><th>Seller</th><th>Category</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody>
+          {% for item in listings %}
+          <tr>
+            <th scope="row"><a href="{{ url_for('site.listing_detail', listing_id=item.id) }}">{{ item.title }}</a></th><td>{{ item.seller }}</td><td>{{ categories[item.category][0] }}</td><td>{{ status(item.status) }}</td>
+            <td>{% if item.status == 'available' %}
+              <form action="{{ url_for('site.archive_listing', listing_id=item.id) }}" method="post">
+                <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+                <button class="button secondary compact" type="submit" aria-label="Archive {{ item.title }}">Archive</button>
+              </form>
+            {% else %}—{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}<p>No listings yet.</p>{% endif %}
+  <h2 class="table-title">Buyback requests</h2>
+  {% if requests %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Device</th><th>Requester</th><th>Type</th><th>Status</th></tr></thead>
+        <tbody>{% for item in requests %}<tr><th scope="row">{{ item.title }}</th><td>{{ item.buyer }}</td><td>{{ item.kind | capitalize }}</td><td>{{ status(item.status) }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  {% else %}<p>No requests yet.</p>{% endif %}
+</section>
+{% endblock %}

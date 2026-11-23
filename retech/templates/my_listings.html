@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% from 'components.html' import listing_card %}
+{% block title %}My listings · RETECH{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="section-heading page-heading">
+    <div><h1>My listings</h1><p>View and manage the devices you’ve listed.</p></div>
+    <a class="button" href="{{ url_for('site.new_listing') }}">+ List a device</a>
+  </div>
+  {% if listings %}
+    <div class="card-grid">{% for listing in listings %}{{ listing_card(listing, true) }}{% endfor %}</div>
+  {% else %}
+    <div class="empty"><h2>No listings yet</h2><p>Add an unused electronic device to get started.</p></div>
+  {% endif %}
+</section>
+{% endblock %}

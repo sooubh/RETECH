@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% from 'components.html' import request_button, status %}
+{% block title %}Requests · RETECH{% endblock %}
+{% block content %}
+<section class="page">
+  <div class="page-heading"><h1>Buyback requests</h1><p>Manage requests you’ve sent and received.</p></div>
+  {% if requests %}
+    <div class="request-list">
+      {% for item in requests %}
+        {% set is_seller = item.seller_id == g.user.id %}
+        <article class="panel request-item">
+          <div>
+            <div class="request-meta">{{ 'Received' if is_seller else 'Sent' }} · {{ item.kind | capitalize }} · {{ item.created_at.strftime('%d %b %Y') }}</div>
+            <h2>{{ item.title }}</h2>
+            <p>{{ 'From ' ~ item.buyer if is_seller else 'To ' ~ item.seller }}{% if item.kind == 'buyback' %} · {{ item.offer | money }}{% endif %}</p>
+            {% if item.kind == 'exchange' %}<p class="description">{{ item.exchange_details }}</p>{% endif %}
+            {% if item.status == 'accepted' %}
+              {% set contact = item.buyer_email if is_seller else item.seller_email %}
+              <p>Arrange the handoff with <a href="mailto:{{ contact | urlencode }}">{{ contact }}</a>.</p>
+            {% endif %}
+          </div>
+          <div class="request-controls">
+            {{ status(item.status) }}
+            <div class="actions">
+              {% if is_seller and item.status == 'pending' %}
+                {{ request_button(item.id, 'accept', 'Accept', '') }}
+                {{ request_button(item.id, 'decline', 'Decline') }}
+              {% elif item.status == 'accepted' %}
+                {% if is_seller %}{{ request_button(item.id, 'complete', 'Mark complete', '') }}{% endif %}
+                {{ request_button(item.id, 'cancel', 'Cancel') }}
+              {% elif not is_seller and item.status == 'pending' %}
+                {{ request_button(item.id, 'cancel', 'Withdraw') }}
+              {% endif %}
+            </div>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty"><h2>No requests yet</h2><p>Buyback and exchange requests you send or receive will appear here.</p><a class="button compact" href="{{ url_for('site.browse') }}">Browse marketplace</a></div>
+  {% endif %}
+</section>
+{% endblock %}

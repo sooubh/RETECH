@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Create an account' if registering else 'Log in' }} · RETECH{% endblock %}
+{% block content %}
+<section class="auth-layout">
+  <div class="auth-art">
+    <img src="{{ url_for('static', filename='images/hero.webp') }}" width="1280" height="853" alt="">
+  </div>
+  <div class="auth-body">
+    <div class="page-heading"><h1>{{ 'Create an account' if registering else 'Log in' }}</h1>
+      <p>{{ 'List devices and connect with buyers and recycling partners.' if registering else 'Manage your devices and buyback requests.' }}</p>
+    </div>
+    {% if error %}<div class="notice error" role="alert">{{ error }}</div>{% endif %}
+    <form method="post" class="field-stack">
+      <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+      {% if registering %}
+        <label>Full name<input name="name" type="text" maxlength="80" autocomplete="name" value="{{ request.form.get('name', '') }}" required></label>
+      {% endif %}
+      <label>Email address<input name="email" type="email" maxlength="254" autocomplete="email" value="{{ request.form.get('email', '') }}" required></label>
+      <label>Password<input name="password" type="password" autocomplete="{{ 'new-password' if registering else 'current-password' }}" {% if registering %}minlength="8" aria-describedby="password-help"{% endif %} maxlength="128" required>
+        {% if registering %}<small id="password-help">Use at least 8 characters.</small>{% endif %}
+      </label>
+      {% if registering %}
+        <label>Account type<select name="role"><option value="member">Individual</option><option value="recycler" {% if request.form.get('role') == 'recycler' %}selected{% endif %}>Recycling partner</option></select></label>
+      {% endif %}
+      <button class="button" type="submit">{{ 'Create account' if registering else 'Log in' }} <span aria-hidden="true">→</span></button>
+    </form>
+    <p class="form-switch">{% if registering %}Already registered? <a href="{{ url_for('site.login', next=request.args.get('next')) }}">Log in</a>{% else %}New to RETECH? <a href="{{ url_for('site.register', next=request.args.get('next')) }}">Create an account</a>{% endif %}</p>
+  </div>
+</section>
+{% endblock %}

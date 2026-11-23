@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Edit listing' if listing else 'List a device' }} · RETECH{% endblock %}
+{% block content %}
+<section class="page">
+  <a class="back-link" href="{{ url_for('site.listing_detail', listing_id=listing.id) if listing else url_for('site.my_listings') }}">← {{ 'Back to listing' if listing else 'My listings' }}</a>
+  <div class="page-heading"><h1>{{ 'Edit listing' if listing else 'List a device' }}</h1><p>Tell buyers what you have and what condition it’s in.</p></div>
+  <form class="form-layout" method="post" data-estimate-url="{{ url_for('site.estimate') }}">
+    <div class="panel field-stack">
+      {% if error %}<div class="notice error" role="alert">{{ error }}</div>{% endif %}
+      <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+      <label>Device name<input name="title" maxlength="100" value="{{ data.title | default('') }}" placeholder="e.g. Lenovo ThinkPad T480" required></label>
+      <div class="field-row">
+        <label>Category<select name="category" required>
+          <option value="">Select category</option>
+          {% for key, item in categories.items() %}<option value="{{ key }}" {% if data.category == key %}selected{% endif %}>{{ item[0] }}</option>{% endfor %}
+        </select></label>
+        <label>Condition<select name="device_condition" required aria-describedby="condition-help">
+          <option value="">Select condition</option>
+          {% for key, item in conditions.items() %}<option value="{{ key }}" data-description="{{ item[2] }}" {% if data.device_condition == key %}selected{% endif %}>{{ item[0] }}</option>{% endfor %}
+        </select></label>
+      </div>
+      <small id="condition-help">Describe any defects in the listing.</small>
+      <label>Description<textarea name="description" maxlength="1500" rows="5" placeholder="Add model details, what’s included and any faults or signs of wear." required>{{ data.description | default('') }}</textarea></label>
+      <button class="button" type="submit">{{ 'Save changes' if listing else 'Publish listing' }} <span aria-hidden="true">→</span></button>
+    </div>
+    <aside class="estimate-panel">
+      <p>Estimated buyback value</p>
+      <output aria-live="polite" data-estimate>{{ (listing.estimate | money) if listing else '—' }}</output>
+      <p data-estimate-note>Choose a category and condition to see an estimate.</p>
+      <small>Estimates use preset category values and adjust for condition.</small>
+    </aside>
+  </form>
+</section>
+{% endblock %}

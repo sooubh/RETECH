@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% from 'components.html' import listing_card %}
+{% block content %}
+<section class="hero" aria-labelledby="home-title">
+  <div class="hero-copy">
+    <p class="overline"><span class="overline-dot"></span> The e-waste buyback marketplace</p>
+    <h1 id="home-title">Old tech.<br><em>New life.</em></h1>
+    <p class="hero-description">Sell, exchange or recycle the electronics you no longer use. Give someone else a reason to plug them back in.</p>
+    <div class="hero-actions">
+      <a href="{{ url_for('site.browse') }}" class="button primary">Browse marketplace <span class="diagonal-arrow" aria-hidden="true"></span></a>
+      <a href="{{ url_for('site.new_listing') }}" class="hero-secondary">List a device <span aria-hidden="true">→</span></a>
+    </div>
+  </div>
+  <img class="hero-image" src="{{ url_for('static', filename='images/hero.webp') }}" alt="A used laptop, phone, earbuds and charging cable on a yellow tabletop" width="1280" height="853" fetchpriority="high">
+</section>
+<section class="market-section" aria-labelledby="latest">
+  <div class="section-heading">
+    <div><h2 id="latest">Fresh on the market</h2><p>Recently listed devices ready for reuse or recycling.</p></div>
+    <a class="button secondary compact" href="{{ url_for('site.browse') }}">View all listings <span class="diagonal-arrow" aria-hidden="true"></span></a>
+  </div>
+  {% if listings %}
+    <div class="card-grid">{% for listing in listings %}{{ listing_card(listing) }}{% endfor %}</div>
+  {% else %}
+    <div class="empty"><h3>The marketplace is open</h3><p>Have an unused device? Add the first listing.</p><a class="button compact" href="{{ url_for('site.new_listing') }}">List a device</a></div>
+  {% endif %}
+</section>
+<section id="how-it-works" class="how-section" aria-labelledby="how-title">
+  <h2 id="how-title">How it works</h2>
+  <div class="steps">
+    <div><h3>List a device</h3><p>Choose a category and condition, then describe your device to get an estimated value.</p></div>
+    <div><h3>Connect with a buyer</h3><p>Buyers and recycling partners can request a buyback or offer a device in exchange.</p></div>
+    <div><h3>Complete the handoff</h3><p>Arrange the handoff after accepting a request, then record it in your buyback history.</p></div>
+  </div>
+  <p class="recycling-note">Before handing over a phone or computer, back up your files and erase your personal data.</p>
+</section>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% from 'components.html' import status %}
+{% block title %}{{ listing.title }} · RETECH{% endblock %}
+{% block content %}
+<section class="page">
+  <a class="back-link" href="{{ url_for('site.my_listings') if is_owner else url_for('site.browse') }}">← {{ 'My listings' if is_owner else 'Marketplace' }}</a>
+  <div class="detail-grid">
+    <figure class="detail-image {{ listing.category }}">
+      {% if listing.category != 'other' %}
+        <img src="{{ url_for('static', filename='images/' ~ listing.category ~ '.webp') }}" alt="" width="768" height="512">
+        <figcaption>Category photo</figcaption>
+      {% else %}
+        <span class="device-placeholder" aria-hidden="true">↻</span>
+      {% endif %}
+    </figure>
+    <div class="detail-copy">
+      <div class="detail-meta">{{ categories[listing.category][0] }} {{ status(listing.status) }}</div>
+      <h1>{{ listing.title }}</h1>
+      <p class="detail-seller">Listed by {{ listing.seller }}{% if listing.seller_role == 'recycler' %} · Recycling partner{% endif %}</p>
+      <dl class="detail-facts">
+        <div><dt>Condition</dt><dd>{{ conditions[listing.device_condition][0] }}</dd></div>
+        <div><dt>Estimated buyback value</dt><dd>{{ listing.estimate | money }}</dd></div>
+      </dl>
+      <h2>About this device</h2>
+      <p class="description">{{ listing.description }}</p>
+      {% if is_owner and listing.status == 'available' %}
+        <div class="actions">
+          {% if can_edit %}
+            <a class="button" href="{{ url_for('site.edit_listing', listing_id=listing.id) }}">Edit listing</a>
+          {% else %}
+            <a class="button" href="{{ url_for('site.requests_view') }}">Review pending requests</a>
+          {% endif %}
+          <form method="post" action="{{ url_for('site.archive_listing', listing_id=listing.id) }}">
+            <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+            <button class="button secondary" type="submit">Archive listing</button>
+          </form>
+        </div>
+      {% elif active_request %}
+        <a class="button" href="{{ url_for('site.history' if listing.status == 'sold' else 'site.requests_view') }}">View your request →</a>
+      {% elif listing.status == 'available' and g.user %}
+        <form method="post" class="field-stack request-form" action="{{ url_for('site.make_request', listing_id=listing.id) }}">
+          <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+          <label>Request type<select name="kind" data-request-kind>
+            <option value="buyback">Buyback at {{ listing.estimate | money }}</option>
+            <option value="exchange">Offer an exchange</option>
+          </select></label>
+          <label data-exchange-details>Exchange details<textarea name="exchange_details" maxlength="300" rows="2" placeholder="Describe the device you’re offering"></textarea></label>
+          <button class="button" type="submit">Send request <span aria-hidden="true">→</span></button>
+        </form>
+      {% elif listing.status == 'available' %}
+        <a class="button" href="{{ url_for('site.login', next=request.path) }}">Log in to send a request →</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}
